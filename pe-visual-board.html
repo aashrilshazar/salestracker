@@ -603,9 +603,18 @@
         </div>
     </div>
 
-    <script src="pe-firms-data.js">
+    <script src="pe-firms-data.js"></script>
+        <script>
+        window.addEventListener('load', () => {
+            if (!Array.isArray(window.PE_FIRMS_DATA)) {
+                console.error("PE_FIRMS_DATA not found");
+                alert("Error: PE_FIRMS_DATA not loaded.");
+                return;
+            }
+            init();
+        });
+        </script>
 
-    </script>
     <script>
         // City coordinates for map
         const CITY_COORDS = {
