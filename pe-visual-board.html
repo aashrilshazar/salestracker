@@ -727,7 +727,7 @@
                 ...firm,
                 id: firm.id || `firm_dataset_${index}`,
                 name: firm.name || `Firm ${index + 1}`,
-                aum: typeof firm.aum === 'number' ? firm.aum : Math.max((firm.aum_m || 0) / 1000, 1),
+                aum: Number(firm.aum) || Math.max((firm.aum_m || 0) / 1000, 1),
                 stage: normalizeStage(firm.stage),
                 peopleCount: typeof firm.peopleCount === 'number' ? firm.peopleCount : normalizedPeople.length,
                 people: normalizedPeople,
@@ -1013,8 +1013,12 @@
             // Update country shading first
             updateCountryShading();
 
-            const geocodedFirms = firms.filter(f => f.hqLocation && CITY_COORDS[f.hqLocation]);
-
+            const geocodedFirms = firms.filter(f =>
+                f.hqLocation &&
+                CITY_COORDS[f.hqLocation] &&
+                typeof f.aum === 'number' &&
+                !isNaN(f.aum)
+            );
             // Remove existing bubbles
             mapG.selectAll('.map-bubble-group').remove();
 
