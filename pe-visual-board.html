@@ -603,7 +603,9 @@
         </div>
     </div>
 
-    <script src="pe-firms-data.js"></script>
+    <script src="pe-firms-data.js">
+
+    </script>
     <script>
         // City coordinates for map
         const CITY_COORDS = {
@@ -803,15 +805,13 @@
         );
 
         let firms = [];
-        if (preferDataset) {
-            firms = datasetFirms;
+            if (Array.isArray(window.PE_FIRMS_DATA)) {
+            firms = window.PE_FIRMS_DATA.map(withBasePosition);
             persistFirms('dataset', firms);
-        } else if (storedFirms.length > 0) {
-            firms = storedFirms;
-        } else {
-            firms = generateSampleData();
-            persistFirms('sample', firms);
-        }
+            } else {
+            console.error('PE_FIRMS_DATA not found');
+            alert('Error: PE_FIRMS_DATA not loaded.');
+            }
         let currentFirm = null;
         let currentSort = 'none';
         let viewMode = 'map';
