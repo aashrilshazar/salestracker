@@ -722,18 +722,26 @@
         }
 
         const datasetFirms = (window.PE_FIRMS_DATA || []).map((firm, index) => {
+            const normalizedAum =
+                Number(firm.aum) ||
+                (firm.aum_b ? Number(firm.aum_b) : 0) ||
+                (firm.aum_m ? Number(firm.aum_m) / 1000 : 0);
+
+            const cleanAum = Number.isFinite(normalizedAum) && normalizedAum > 0 ? normalizedAum : 1;
+
             const normalizedPeople = Array.isArray(firm.people) ? firm.people : [];
             return withBasePosition({
                 ...firm,
                 id: firm.id || `firm_dataset_${index}`,
                 name: firm.name || `Firm ${index + 1}`,
-                aum: Number(firm.aum) || Math.max((firm.aum_m || 0) / 1000, 1),
+                aum: cleanAum,
                 stage: normalizeStage(firm.stage),
                 peopleCount: typeof firm.peopleCount === 'number' ? firm.peopleCount : normalizedPeople.length,
                 people: normalizedPeople,
                 hqLocation: firm.hqLocation || null
             });
         });
+
 
         function loadStoredFirms() {
             try {
@@ -947,9 +955,9 @@
 
                 // Draw firms
                 updateMapBubbles();
-            } catch (error) {
-                console.error('Error loading map data:', error);
-            }
+                    } catch (error) {
+                        console.error('Error loading map data:', error);
+                    }
         }
 
         // Update country shading based on firm stages
@@ -1157,7 +1165,8 @@
         }
 
         function drawFirm(firm) {
-            const radius = Math.sqrt(firm.aum) * 5;
+            const aum = Number.isFinite(firm.aum) && firm.aum > 0 ? firm.aum : 1;
+            const radius = Math.max(3, Math.sqrt(aum) * 5);
             const isHovered = hoveredFirm && hoveredFirm.id === firm.id;
             const scale = isHovered ? 1.1 : 1;
             const pulse = isHovered ? (Math.sin(animationTime + firm.x * 0.01) * 0.05 + 1) : 1;
@@ -1193,7 +1202,7 @@
             // Draw AUM
             ctx.fillStyle = '#94a3b8';
             ctx.font = `${Math.min(11, radius / 4)}px sans-serif`;
-            ctx.fillText(`${firm.aum.toFixed(1)}B`, 0, 10);
+            ctx.fillText(`${Number(firm.aum || 0).toFixed(1)}B`, 0, 10);
             
             ctx.restore();
         }
