@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "pe-visual-board.html", "use": "@vercel/static" },
+    { "src": "pe-firms-data.js", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/pe-visual-board.html" }
+  ]
+}
