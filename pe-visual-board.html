@@ -845,56 +845,6 @@
             setView('map');
         }
 
-        function generateSampleData() {
-            const firmNames = [
-                'Atlas Capital Partners', 'Vertex Ventures', 'Summit Partners', 'Silver Lake',
-                'Thoma Bravo', 'Vista Equity', 'Insight Partners', 'General Atlantic',
-                'KKR', 'Blackstone', 'Apollo', 'Carlyle Group', 'Warburg Pincus',
-                'TPG Capital', 'Advent International', 'CVC Capital', 'Permira',
-                'Bain Capital', 'Providence Equity', 'Hellman & Friedman'
-            ];
-
-            const cities = Object.keys(CITY_COORDS);
-
-            return firmNames.map((name, i) => {
-                const city = cities[Math.floor(Math.random() * cities.length)];
-                return withBasePosition({
-                    id: 'firm_' + Date.now() + '_' + i,
-                    name: name,
-                    aum: Math.random() * 100 + 1,
-                    stage: Math.floor(Math.random() * STAGE_COUNT) + 1,
-                    peopleCount: Math.floor(Math.random() * 50) + 5,
-                    x: Math.random() * 2000 - 1000,
-                    y: Math.random() * 2000 - 1000,
-                    people: generatePeople(),
-                    hqLocation: city
-                });
-            });
-        }
-
-        function generatePeople() {
-            const roles = ['GP', 'MD', 'Principal', 'VP', 'Associate'];
-            const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily'];
-            const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Davis'];
-            
-            const people = [];
-            const count = Math.floor(Math.random() * 8) + 3;
-            
-            for (let i = 0; i < count; i++) {
-                people.push({
-                    id: 'person_' + Date.now() + '_' + i,
-                    name: firstNames[Math.floor(Math.random() * firstNames.length)] + ' ' + 
-                          lastNames[Math.floor(Math.random() * lastNames.length)],
-                    role: roles[Math.floor(Math.random() * roles.length)],
-                    title: roles[Math.floor(Math.random() * roles.length)],
-                    lastContact: Math.random() > 0.5 ? 
-                        new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString() : null
-                });
-            }
-            
-            return people;
-        }
-
         // Map initialization
         async function initMap() {
             const container = document.getElementById('map-container');
