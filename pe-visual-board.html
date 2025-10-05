@@ -604,17 +604,6 @@
     </div>
 
     <script src="pe-firms-data.js"></script>
-        <script>
-        window.addEventListener('load', () => {
-            if (!Array.isArray(window.PE_FIRMS_DATA)) {
-                console.error("PE_FIRMS_DATA not found");
-                alert("Error: PE_FIRMS_DATA not loaded.");
-                return;
-            }
-            init();
-        });
-        </script>
-
     <script>
         // City coordinates for map
         const CITY_COORDS = {
@@ -722,26 +711,18 @@
         }
 
         const datasetFirms = (window.PE_FIRMS_DATA || []).map((firm, index) => {
-            const normalizedAum =
-                Number(firm.aum) ||
-                (firm.aum_b ? Number(firm.aum_b) : 0) ||
-                (firm.aum_m ? Number(firm.aum_m) / 1000 : 0);
-
-            const cleanAum = Number.isFinite(normalizedAum) && normalizedAum > 0 ? normalizedAum : 1;
-
             const normalizedPeople = Array.isArray(firm.people) ? firm.people : [];
             return withBasePosition({
                 ...firm,
                 id: firm.id || `firm_dataset_${index}`,
                 name: firm.name || `Firm ${index + 1}`,
-                aum: cleanAum,
+                aum: typeof firm.aum === 'number' ? firm.aum : Math.max((firm.aum_m || 0) / 1000, 1),
                 stage: normalizeStage(firm.stage),
                 peopleCount: typeof firm.peopleCount === 'number' ? firm.peopleCount : normalizedPeople.length,
                 people: normalizedPeople,
                 hqLocation: firm.hqLocation || null
             });
         });
-
 
         function loadStoredFirms() {
             try {
@@ -822,13 +803,15 @@
         );
 
         let firms = [];
-            if (Array.isArray(window.PE_FIRMS_DATA)) {
-            firms = window.PE_FIRMS_DATA.map(withBasePosition);
+        if (preferDataset) {
+            firms = datasetFirms;
             persistFirms('dataset', firms);
-            } else {
-            console.error('PE_FIRMS_DATA not found');
-            alert('Error: PE_FIRMS_DATA not loaded.');
-            }
+        } else if (storedFirms.length > 0) {
+            firms = storedFirms;
+        } else {
+            firms = generateSampleData();
+            persistFirms('sample', firms);
+        }
         let currentFirm = null;
         let currentSort = 'none';
         let viewMode = 'map';
@@ -860,6 +843,56 @@
             
             // Ensure proper view is displayed on load
             setView('map');
+        }
+
+        function generateSampleData() {
+            const firmNames = [
+                'Atlas Capital Partners', 'Vertex Ventures', 'Summit Partners', 'Silver Lake',
+                'Thoma Bravo', 'Vista Equity', 'Insight Partners', 'General Atlantic',
+                'KKR', 'Blackstone', 'Apollo', 'Carlyle Group', 'Warburg Pincus',
+                'TPG Capital', 'Advent International', 'CVC Capital', 'Permira',
+                'Bain Capital', 'Providence Equity', 'Hellman & Friedman'
+            ];
+
+            const cities = Object.keys(CITY_COORDS);
+
+            return firmNames.map((name, i) => {
+                const city = cities[Math.floor(Math.random() * cities.length)];
+                return withBasePosition({
+                    id: 'firm_' + Date.now() + '_' + i,
+                    name: name,
+                    aum: Math.random() * 100 + 1,
+                    stage: Math.floor(Math.random() * STAGE_COUNT) + 1,
+                    peopleCount: Math.floor(Math.random() * 50) + 5,
+                    x: Math.random() * 2000 - 1000,
+                    y: Math.random() * 2000 - 1000,
+                    people: generatePeople(),
+                    hqLocation: city
+                });
+            });
+        }
+
+        function generatePeople() {
+            const roles = ['GP', 'MD', 'Principal', 'VP', 'Associate'];
+            const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily'];
+            const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Davis'];
+            
+            const people = [];
+            const count = Math.floor(Math.random() * 8) + 3;
+            
+            for (let i = 0; i < count; i++) {
+                people.push({
+                    id: 'person_' + Date.now() + '_' + i,
+                    name: firstNames[Math.floor(Math.random() * firstNames.length)] + ' ' + 
+                          lastNames[Math.floor(Math.random() * lastNames.length)],
+                    role: roles[Math.floor(Math.random() * roles.length)],
+                    title: roles[Math.floor(Math.random() * roles.length)],
+                    lastContact: Math.random() > 0.5 ? 
+                        new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString() : null
+                });
+            }
+            
+            return people;
         }
 
         // Map initialization
@@ -955,9 +988,9 @@
 
                 // Draw firms
                 updateMapBubbles();
-                    } catch (error) {
-                        console.error('Error loading map data:', error);
-                    }
+            } catch (error) {
+                console.error('Error loading map data:', error);
+            }
         }
 
         // Update country shading based on firm stages
@@ -1021,12 +1054,8 @@
             // Update country shading first
             updateCountryShading();
 
-            const geocodedFirms = firms.filter(f =>
-                f.hqLocation &&
-                CITY_COORDS[f.hqLocation] &&
-                typeof f.aum === 'number' &&
-                !isNaN(f.aum)
-            );
+            const geocodedFirms = firms.filter(f => f.hqLocation && CITY_COORDS[f.hqLocation]);
+
             // Remove existing bubbles
             mapG.selectAll('.map-bubble-group').remove();
 
@@ -1165,8 +1194,7 @@
         }
 
         function drawFirm(firm) {
-            const aum = Number.isFinite(firm.aum) && firm.aum > 0 ? firm.aum : 1;
-            const radius = Math.max(3, Math.sqrt(aum) * 5);
+            const radius = Math.sqrt(firm.aum) * 5;
             const isHovered = hoveredFirm && hoveredFirm.id === firm.id;
             const scale = isHovered ? 1.1 : 1;
             const pulse = isHovered ? (Math.sin(animationTime + firm.x * 0.01) * 0.05 + 1) : 1;
@@ -1202,7 +1230,7 @@
             // Draw AUM
             ctx.fillStyle = '#94a3b8';
             ctx.font = `${Math.min(11, radius / 4)}px sans-serif`;
-            ctx.fillText(`${Number(firm.aum || 0).toFixed(1)}B`, 0, 10);
+            ctx.fillText(`${firm.aum.toFixed(1)}B`, 0, 10);
             
             ctx.restore();
         }
