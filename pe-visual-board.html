@@ -3,445 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PE Visual War Map - Personal Edition</title>
+    <title>PE Visual War Map - Optimized</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #0f0f23;
-            color: #e2e8f0;
-            overflow: hidden;
-        }
-
-        /* Main Layout */
-        #app {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Top Controls */
-        .controls {
-            background: rgba(15, 23, 42, 0.95);
-            padding: 1rem;
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-
-        .search-box {
-            flex: 1;
-            max-width: 400px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 0.5rem 1rem;
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 8px;
-            color: #e2e8f0;
-            font-size: 14px;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .view-controls {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        button {
-            padding: 0.5rem 1rem;
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 6px;
-            color: #93c5fd;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background: rgba(59, 130, 246, 0.2);
-            transform: translateY(-1px);
-        }
-
-        button.active {
-            background: rgba(59, 130, 246, 0.3);
-            border-color: #3b82f6;
-            color: #dbeafe;
-        }
-
-        /* Canvas Container */
-        #canvas-container {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-        }
-
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            cursor: grab;
-        }
-
-        canvas:active {
-            cursor: grabbing;
-        }
-
-        /* Map Container */
-        #map-container {
-            display: none;
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            background: #0f0f23;
-        }
-
-        #map-container.active {
-            display: block;
-        }
-
-        #map-container svg {
-            width: 100%;
-            height: 100%;
-            cursor: grab;
-        }
-
-        #map-container svg:active {
-            cursor: grabbing;
-        }
-
-        .map-country {
-            fill: rgba(30, 41, 59, 0.5);
-            stroke: rgba(100, 116, 139, 0.3);
-            stroke-width: 0.5;
-        }
-
-        .map-bubble {
-            fill: #3b82f6;
-            stroke: rgba(255, 255, 255, 0.2);
-            stroke-width: 0.5;
-            opacity: 0.9;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .map-bubble:hover {
-            stroke: #93c5fd;
-            stroke-width: 1.5;
-            opacity: 1;
-            transform-origin: center;
-        }
-
-        .map-bubble-label {
-            fill: #e2e8f0;
-            font-size: 11px;
-            pointer-events: none;
-            text-anchor: middle;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .map-bubble-group:hover .map-bubble-label {
-            opacity: 1;
-        }
-
-        /* Firm Details Panel */
-        #firm-panel {
-            position: fixed;
-            right: -400px;
-            top: 0;
-            width: 400px;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.98);
-            border-left: 1px solid rgba(100, 116, 139, 0.3);
-            transition: right 0.3s ease;
-            z-index: 200;
-            overflow-y: auto;
-            backdrop-filter: blur(20px);
-        }
-
-        #firm-panel.open {
-            right: 0;
-        }
-
-        .panel-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
-            position: relative;
-        }
-
-        .close-panel {
-            position: absolute;
-            right: 1rem;
-            top: 1rem;
-            width: 32px;
-            height: 32px;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 6px;
-            color: #f87171;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .firm-name {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .firm-aum {
-            color: #94a3b8;
-            font-size: 1.1rem;
-        }
-
-        /* Progress Bar */
-        .progress-section {
-            padding: 1.5rem;
-            border-bottom: 1px solid rgba(100, 116, 139, 0.3);
-        }
-
-        .progress-bar {
-            height: 40px;
-            background: rgba(30, 41, 59, 0.5);
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
-            margin-top: 1rem;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #64748b, #6366f1, #4f46e5, #2563eb, #0ea5e9, #06b6d4, #10b981, #ef4444);
-            transition: width 0.5s ease;
-            border-radius: 8px;
-        }
-
-        .progress-stages {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 0.5rem;
-            font-size: 11px;
-            color: #64748b;
-        }
-
-        /* People Section */
-        .people-section {
-            padding: 1.5rem;
-        }
-
-        .people-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .role-group {
-            padding: 0.75rem;
-            background: rgba(30, 41, 59, 0.3);
-            border-radius: 8px;
-        }
-
-        .role-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #94a3b8;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .person-bubble {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 0.75rem;
-            margin: 0.25rem;
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .person-bubble:hover {
-            background: rgba(59, 130, 246, 0.2);
-            transform: scale(1.05);
-        }
-
-        .person-name {
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 0.25rem;
-        }
-
-        .person-title {
-            font-size: 11px;
-            color: #94a3b8;
-            text-align: center;
-        }
-
-        .last-contact {
-            font-size: 10px;
-            color: #10b981;
-            margin-top: 0.25rem;
-        }
-
-        /* Kanban View */
-        #kanban-view {
-            display: none;
-            padding: 1rem;
-            height: calc(100vh - 60px);
-            overflow-x: auto;
-        }
-
-        #kanban-view.active {
-            display: flex;
-        }
-
-        .kanban-column {
-            min-width: 280px;
-            max-width: 280px;
-            background: rgba(30, 41, 59, 0.3);
-            border-radius: 8px;
-            margin-right: 1rem;
-            padding: 1rem;
-            height: 100%;
-            overflow-y: auto;
-        }
-
-        .kanban-header {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            padding: 0.5rem;
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 6px;
-            text-align: center;
-        }
-
-        .kanban-card {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            cursor: move;
-            transition: all 0.2s;
-        }
-
-        .kanban-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        .kanban-card-name {
-            font-weight: 500;
-            margin-bottom: 0.25rem;
-        }
-
-        .kanban-card-aum {
-            font-size: 12px;
-            color: #94a3b8;
-        }
-
-        /* Data Management */
-        .data-controls {
-            margin-left: auto;
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        #data-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 300;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #data-modal.open {
-            display: flex;
-        }
-
-        .modal-content {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-            color: #94a3b8;
-        }
-
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            padding: 0.5rem;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 6px;
-            color: #e2e8f0;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .stage-indicator {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 0.5rem;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #0f0f23; color: #e2e8f0; overflow: hidden; }
+        
+        #app { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Controls */
+        .controls { background: rgba(15,23,42,0.95); padding: 1rem; display: flex; gap: 1rem; align-items: center; border-bottom: 1px solid rgba(100,116,139,0.3); backdrop-filter: blur(10px); }
+        .search-box { flex: 1; max-width: 400px; }
+        .search-box input, .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.5rem 1rem; background: rgba(30,41,59,0.8); border: 1px solid rgba(100,116,139,0.3); border-radius: 8px; color: #e2e8f0; font-size: 14px; }
+        .search-box input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        
+        button { padding: 0.5rem 1rem; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 6px; color: #93c5fd; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        button:hover { background: rgba(59,130,246,0.2); transform: translateY(-1px); }
+        button.active { background: rgba(59,130,246,0.3); border-color: #3b82f6; color: #dbeafe; }
+        
+        /* Views */
+        .view-container { flex: 1; position: relative; overflow: hidden; display: none; }
+        .view-container.active { display: block; }
+        #kanban-view.active { display: flex; }
+        
+        canvas, #map-container svg { width: 100%; height: 100%; cursor: grab; }
+        canvas:active, #map-container svg:active { cursor: grabbing; }
+        
+        .map-country { fill: rgba(30,41,59,0.5); stroke: rgba(100,116,139,0.3); stroke-width: 0.5; }
+        .map-bubble { fill: #3b82f6; stroke: rgba(255,255,255,0.2); stroke-width: 0.5; opacity: 0.9; cursor: pointer; transition: all 0.2s; }
+        .map-bubble:hover { stroke: #93c5fd; stroke-width: 1.5; opacity: 1; }
+        .map-bubble-label { fill: #e2e8f0; font-size: 11px; pointer-events: none; text-anchor: middle; opacity: 0; transition: opacity 0.2s; }
+        .map-bubble-group:hover .map-bubble-label { opacity: 1; }
+        
+        /* Panel */
+        #firm-panel { position: fixed; right: -400px; top: 0; width: 400px; height: 100%; background: rgba(15,23,42,0.98); border-left: 1px solid rgba(100,116,139,0.3); transition: right 0.3s; z-index: 200; overflow-y: auto; backdrop-filter: blur(20px); }
+        #firm-panel.open { right: 0; }
+        .panel-header { padding: 1.5rem; border-bottom: 1px solid rgba(100,116,139,0.3); position: relative; }
+        .close-panel { position: absolute; right: 1rem; top: 1rem; width: 32px; height: 32px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; color: #f87171; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .firm-name { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .firm-aum { color: #94a3b8; font-size: 1.1rem; }
+        
+        /* Progress */
+        .progress-section { padding: 1.5rem; border-bottom: 1px solid rgba(100,116,139,0.3); }
+        .progress-bar { height: 40px; background: rgba(30,41,59,0.5); border-radius: 8px; position: relative; overflow: hidden; margin-top: 1rem; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg,#64748b,#6366f1,#4f46e5,#2563eb,#0ea5e9,#06b6d4,#10b981,#ef4444); transition: width 0.5s; border-radius: 8px; }
+        .progress-stages { display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 11px; color: #64748b; }
+        
+        /* People */
+        .people-section { padding: 1.5rem; }
+        .people-grid { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+        .role-group { padding: 0.75rem; background: rgba(30,41,59,0.3); border-radius: 8px; }
+        .role-title { font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .person-bubble { display: inline-flex; flex-direction: column; align-items: center; padding: 0.75rem; margin: 0.25rem; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .person-bubble:hover { background: rgba(59,130,246,0.2); transform: scale(1.05); }
+        .person-name { font-size: 13px; font-weight: 500; margin-bottom: 0.25rem; }
+        .person-title { font-size: 11px; color: #94a3b8; text-align: center; }
+        .last-contact { font-size: 10px; color: #10b981; margin-top: 0.25rem; }
+        
+        /* Kanban */
+        .kanban-column { min-width: 280px; background: rgba(30,41,59,0.3); border-radius: 8px; margin-right: 1rem; padding: 1rem; height: 100%; overflow-y: auto; }
+        .kanban-header { font-weight: 600; margin-bottom: 1rem; padding: 0.5rem; background: rgba(59,130,246,0.1); border-radius: 6px; text-align: center; }
+        .kanban-card { background: rgba(15,23,42,0.8); border: 1px solid rgba(100,116,139,0.3); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.5rem; cursor: move; transition: all 0.2s; }
+        .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .kanban-card-name { font-weight: 500; margin-bottom: 0.25rem; }
+        .kanban-card-aum { font-size: 12px; color: #94a3b8; }
+        
+        /* Modal */
+        #data-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 300; align-items: center; justify-content: center; }
+        #data-modal.open { display: flex; }
+        .modal-content { background: #1e293b; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 0.5rem; color: #94a3b8; }
+        .form-group input { padding: 0.5rem; }
+        .form-actions { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+        
+        .stage-indicator { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-left: 0.5rem; }
         .stage-1 { background: #64748b; }
         .stage-2 { background: #6366f1; }
         .stage-3 { background: #4f46e5; }
@@ -450,90 +88,62 @@
         .stage-6 { background: #06b6d4; }
         .stage-7 { background: #10b981; }
         .stage-8 { background: #ef4444; }
-
-        /* Tooltip */
-        .map-tooltip {
-            position: absolute;
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid rgba(100, 116, 139, 0.5);
-            border-radius: 6px;
-            padding: 0.5rem;
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .map-tooltip.visible {
-            opacity: 1;
-        }
+        
+        .map-tooltip { position: absolute; background: rgba(15,23,42,0.95); border: 1px solid rgba(100,116,139,0.5); border-radius: 6px; padding: 0.5rem; font-size: 12px; pointer-events: none; z-index: 1000; opacity: 0; transition: opacity 0.2s; }
+        .map-tooltip.visible { opacity: 1; }
     </style>
 </head>
 <body>
     <div id="app">
         <div class="controls">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="Search for a PE firm..." />
+                <input type="text" id="search-input" placeholder="Search for a PE firm...">
             </div>
-            
             <div class="view-controls">
                 <button id="view-map" class="active">Map View</button>
                 <button id="view-scatter">Scatter View</button>
                 <button id="view-kanban">Kanban View</button>
-                <button id="sort-reset" data-sort-button data-sort="none" style="display:none;">Reset Layout</button>
-                <button id="sort-aum" data-sort-button data-sort="aum" style="display:none;">Sort by AUM</button>
-                <button id="sort-stage" data-sort-button data-sort="stage" style="display:none;">Sort by Stage</button>
-                <button id="sort-people" data-sort-button data-sort="people" style="display:none;">Sort by People</button>
+                <button id="sort-reset" data-sort="none" style="display:none;">Reset Layout</button>
+                <button id="sort-aum" data-sort="aum" style="display:none;">Sort by AUM</button>
+                <button id="sort-stage" data-sort="stage" style="display:none;">Sort by Stage</button>
+                <button id="sort-people" data-sort="people" style="display:none;">Sort by People</button>
             </div>
-
-            <div class="data-controls">
+            <div class="data-controls" style="margin-left:auto;display:flex;gap:0.5rem;">
                 <button id="add-firm">Add Firm</button>
                 <button id="import-data">Import CSV</button>
                 <button id="export-data">Export Data</button>
             </div>
         </div>
 
-        <div id="map-container" class="active">
+        <div id="map-container" class="view-container active">
             <svg id="world-map"></svg>
             <div class="map-tooltip"></div>
         </div>
 
-        <div id="canvas-container" style="display: none;">
+        <div id="canvas-container" class="view-container">
             <canvas id="main-canvas"></canvas>
         </div>
 
-        <div id="kanban-view"></div>
+        <div id="kanban-view" class="view-container"></div>
 
         <div id="firm-panel">
             <div class="panel-header">
-                <div class="close-panel" onclick="closeFirmPanel()">✕</div>
+                <div class="close-panel" id="close-panel">✕</div>
                 <div class="firm-name" id="panel-firm-name"></div>
                 <div class="firm-aum" id="panel-firm-aum"></div>
                 <span class="stage-indicator" id="panel-stage"></span>
             </div>
-            
             <div class="progress-section">
-                <div style="font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Pipeline Progress</div>
+                <div style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Pipeline Progress</div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill"></div>
                 </div>
-                <div class="progress-stages">
-                    <span>No Contact</span>
-                    <span>Initial Engagement</span>
-                    <span>Broader Demo Evaluation (NDA, POC, Pilot)</span>
-                    <span>Validation (Docs Uploaded)</span>
-                    <span>Commercials (Contract Negotiations)</span>
-                    <span>Decision (Exploring Others)</span>
-                    <span>Closed Won</span>
-                    <span>Closed Lost</span>
-                </div>
+                <div class="progress-stages" id="progress-stages"></div>
             </div>
-
             <div class="people-section">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Team Members</div>
-                    <button onclick="addPerson()" style="padding: 0.25rem 0.5rem; font-size: 12px;">Add Person</button>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Team Members</div>
+                    <button id="add-person" style="padding:0.25rem 0.5rem;font-size:12px;">Add Person</button>
                 </div>
                 <div class="people-grid" id="people-grid"></div>
             </div>
@@ -545,58 +155,27 @@
                 <form id="firm-form">
                     <div class="form-group">
                         <label>Firm Name</label>
-                        <input type="text" id="form-name" required />
+                        <input type="text" id="form-name" required>
                     </div>
                     <div class="form-group">
                         <label>AUM (in billions)</label>
-                        <input type="number" id="form-aum" step="0.1" min="1" required />
+                        <input type="number" id="form-aum" step="0.1" min="1" required>
                     </div>
                     <div class="form-group">
                         <label>Headquarters Location</label>
-                        <select id="form-location">
-                            <option value="">Select Location</option>
-                            <option value="New York">New York</option>
-                            <option value="London">London</option>
-                            <option value="Paris">Paris</option>
-                            <option value="San Francisco">San Francisco</option>
-                            <option value="Boston">Boston</option>
-                            <option value="Chicago">Chicago</option>
-                            <option value="Miami">Miami</option>
-                            <option value="Luxembourg">Luxembourg</option>
-                            <option value="Tel Aviv">Tel Aviv</option>
-                            <option value="Hong Kong">Hong Kong</option>
-                            <option value="Sydney">Sydney</option>
-                            <option value="Beijing">Beijing</option>
-                            <option value="Dubai">Dubai</option>
-                            <option value="Toronto">Toronto</option>
-                            <option value="Zurich">Zurich</option>
-                            <option value="Denver">Denver</option>
-                            <option value="Seattle">Seattle</option>
-                            <option value="Austin">Austin</option>
-                            <option value="Los Angeles">Los Angeles</option>
-                            <option value="Munich">Munich</option>
-                        </select>
+                        <select id="form-location"></select>
                     </div>
                     <div class="form-group">
                         <label>Pipeline Stage</label>
-                        <select id="form-stage">
-                            <option value="1">1 - No Contact</option>
-                            <option value="2">2 - Initial Engagement</option>
-                            <option value="3">3 - Broader Demo Evaluation (NDA, POC, Pilot)</option>
-                            <option value="4">4 - Validation (Docs Uploaded)</option>
-                            <option value="5">5 - Commercials (Contract Negotiations)</option>
-                            <option value="6">6 - Decision (Exploring Others)</option>
-                            <option value="7">7 - Closed Won</option>
-                            <option value="8">8 - Closed Lost</option>
-                        </select>
+                        <select id="form-stage"></select>
                     </div>
                     <div class="form-group">
                         <label>Number of Investment Professionals</label>
-                        <input type="number" id="form-people-count" min="0" />
+                        <input type="number" id="form-people-count" min="0">
                     </div>
                     <div class="form-actions">
                         <button type="submit">Save Firm</button>
-                        <button type="button" onclick="closeModal()">Cancel</button>
+                        <button type="button" id="cancel-modal">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -605,1086 +184,616 @@
 
     <script src="pe-firms-data.js"></script>
     <script>
-        // City coordinates for map
-        const CITY_COORDS = {
-            'New York': [40.7128, -74.0060],
-            'London': [51.5074, -0.1278],
-            'Paris': [48.8566, 2.3522],
-            'San Francisco': [37.7749, -122.4194],
-            'Boston': [42.3601, -71.0589],
-            'Chicago': [41.8781, -87.6298],
-            'Miami': [25.7617, -80.1918],
-            'Luxembourg': [49.6117, 6.1319],
-            'Tel Aviv': [32.0853, 34.7818],
-            'Hong Kong': [22.3193, 114.1694],
-            'Sydney': [-33.8688, 151.2093],
-            'Beijing': [39.9042, 116.4074],
-            'Dubai': [25.2048, 55.2708],
-            'Toronto': [43.6532, -79.3832],
-            'Zurich': [47.3769, 8.5417],
-            'Denver': [39.7392, -104.9903],
-            'Seattle': [47.6062, -122.3321],
-            'Austin': [30.2672, -97.7431],
-            'Los Angeles': [34.0522, -118.2437],
-            'Munich': [48.1351, 11.5820]
+        const CONFIG = {
+            STORAGE_KEY: 'peFirms',
+            SOURCE_KEY: 'peFirmsSource',
+            STAGE_NAMES: ['No Contact','Initial Engagement','Broader Demo Evaluation (NDA, POC, Pilot)','Validation (Docs Uploaded)','Commercials (Contract Negotiations)','Decision (Exploring Others)','Closed Won','Closed Lost'],
+            STAGE_COLORS: ['#64748b','#6366f1','#4f46e5','#2563eb','#0ea5e9','#06b6d4','#10b981','#ef4444'],
+            CITY_COORDS: {
+                'New York': [40.7128,-74.0060], 'London': [51.5074,-0.1278], 'Paris': [48.8566,2.3522],
+                'San Francisco': [37.7749,-122.4194], 'Boston': [42.3601,-71.0589], 'Chicago': [41.8781,-87.6298],
+                'Miami': [25.7617,-80.1918], 'Luxembourg': [49.6117,6.1319], 'Tel Aviv': [32.0853,34.7818],
+                'Hong Kong': [22.3193,114.1694], 'Sydney': [-33.8688,151.2093], 'Beijing': [39.9042,116.4074],
+                'Dubai': [25.2048,55.2708], 'Toronto': [43.6532,-79.3832], 'Zurich': [47.3769,8.5417],
+                'Denver': [39.7392,-104.9903], 'Seattle': [47.6062,-122.3321], 'Austin': [30.2672,-97.7431],
+                'Los Angeles': [34.0522,-118.2437], 'Munich': [48.1351,11.5820]
+            },
+            CITY_TO_COUNTRY: {
+                'New York':'USA','San Francisco':'USA','Boston':'USA','Chicago':'USA','Miami':'USA',
+                'Denver':'USA','Seattle':'USA','Austin':'USA','Los Angeles':'USA','London':'GBR',
+                'Paris':'FRA','Luxembourg':'LUX','Tel Aviv':'ISR','Hong Kong':'CHN','Sydney':'AUS',
+                'Beijing':'CHN','Dubai':'ARE','Toronto':'CAN','Zurich':'CHE','Munich':'DEU'
+            },
+            COUNTRY_IDS: {840:'USA',826:'GBR',250:'FRA',442:'LUX',376:'ISR',156:'CHN',36:'AUS',784:'ARE',124:'CAN',756:'CHE',276:'DEU'}
         };
 
-        // Map cities to countries (for shading)
-        const CITY_TO_COUNTRY = {
-            'New York': 'USA',
-            'San Francisco': 'USA',
-            'Boston': 'USA',
-            'Chicago': 'USA',
-            'Miami': 'USA',
-            'Denver': 'USA',
-            'Seattle': 'USA',
-            'Austin': 'USA',
-            'Los Angeles': 'USA',
-            'London': 'GBR',
-            'Paris': 'FRA',
-            'Luxembourg': 'LUX',
-            'Tel Aviv': 'ISR',
-            'Hong Kong': 'CHN',
-            'Sydney': 'AUS',
-            'Beijing': 'CHN',
-            'Dubai': 'ARE',
-            'Toronto': 'CAN',
-            'Zurich': 'CHE',
-            'Munich': 'DEU'
+        const state = {
+            firms: [],
+            currentFirm: null,
+            currentSort: 'none',
+            viewMode: 'map',
+            canvas: null,
+            ctx: null,
+            camera: {x:0, y:0, zoom:1},
+            isDragging: false,
+            dragStart: {x:0, y:0},
+            hoveredFirm: null,
+            animationFrame: null,
+            mapSvg: null,
+            mapG: null,
+            mapProjection: null,
+            mapZoom: null
         };
 
-        // Data Management
-        const STAGE_NAMES = [
-            'No Contact',
-            'Initial Engagement',
-            'Broader Demo Evaluation (NDA, POC, Pilot)',
-            'Validation (Docs Uploaded)',
-            'Commercials (Contract Negotiations)',
-            'Decision (Exploring Others)',
-            'Closed Won',
-            'Closed Lost'
-        ];
-        const STAGE_COLORS = [
-            '#64748b',
-            '#6366f1',
-            '#4f46e5',
-            '#2563eb',
-            '#0ea5e9',
-            '#06b6d4',
-            '#10b981',
-            '#ef4444'
-        ];
-        const STAGE_COUNT = STAGE_NAMES.length;
-
-        function normalizeStage(value) {
-            const num = parseInt(value, 10);
-            if (Number.isFinite(num)) {
-                return Math.min(Math.max(num, 1), STAGE_COUNT);
-            }
-            return 1;
-        }
-
-        function getStageName(stage) {
-            return STAGE_NAMES[stage - 1] || 'Unknown Stage';
-        }
-
-        const STORAGE_KEY = 'peFirms';
-        const SOURCE_KEY = 'peFirmsSource';
+        // Utility functions
+        const $ = id => document.getElementById(id);
+        const normalizeStage = v => Math.min(Math.max(parseInt(v,10)||1, 1), CONFIG.STAGE_NAMES.length);
+        const getStageName = s => CONFIG.STAGE_NAMES[s-1] || 'Unknown';
+        const getStageColor = s => CONFIG.STAGE_COLORS[normalizeStage(s)-1];
 
         function withBasePosition(firm) {
-            const hasBaseX = typeof firm.baseX === 'number';
-            const hasBaseY = typeof firm.baseY === 'number';
-            const inferredX = typeof firm.x === 'number' ? firm.x : (hasBaseX ? firm.baseX : Math.random() * 2000 - 1000);
-            const inferredY = typeof firm.y === 'number' ? firm.y : (hasBaseY ? firm.baseY : Math.random() * 2000 - 1000);
-
-            const baseX = hasBaseX ? firm.baseX : inferredX;
-            const baseY = hasBaseY ? firm.baseY : inferredY;
-
-            return {
-                ...firm,
-                stage: normalizeStage(firm.stage),
-                baseX,
-                baseY,
-                x: typeof firm.x === 'number' ? firm.x : baseX,
-                y: typeof firm.y === 'number' ? firm.y : baseY
-            };
+            const baseX = firm.baseX ?? firm.x ?? Math.random()*2000-1000;
+            const baseY = firm.baseY ?? firm.y ?? Math.random()*2000-1000;
+            return {...firm, stage: normalizeStage(firm.stage), baseX, baseY, x: firm.x ?? baseX, y: firm.y ?? baseY};
         }
 
-        const datasetFirms = (window.PE_FIRMS_DATA || []).map((firm, index) => {
-            const normalizedPeople = Array.isArray(firm.people) ? firm.people : [];
-            return withBasePosition({
-                ...firm,
-                id: firm.id || `firm_dataset_${index}`,
-                name: firm.name || `Firm ${index + 1}`,
-                aum: typeof firm.aum === 'number' ? firm.aum : Math.max((firm.aum_m || 0) / 1000, 1),
-                stage: normalizeStage(firm.stage),
-                peopleCount: typeof firm.peopleCount === 'number' ? firm.peopleCount : normalizedPeople.length,
-                people: normalizedPeople,
-                hqLocation: firm.hqLocation || null
-            });
-        });
-
-        function loadStoredFirms() {
+        function loadData() {
             try {
-                const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-                return Array.isArray(stored) ? stored : [];
-            } catch (error) {
-                console.warn('Unable to parse stored firms:', error);
-                return [];
-            }
-        }
+                const stored = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY)) || [];
+                const source = localStorage.getItem(CONFIG.SOURCE_KEY);
+                const dataset = (window.PE_FIRMS_DATA || []).map((f,i) => withBasePosition({
+                    ...f,
+                    id: f.id || `firm_dataset_${i}`,
+                    name: f.name || `Firm ${i+1}`,
+                    aum: f.aum ?? Math.max((f.aum_m||0)/1000, 1),
+                    peopleCount: f.peopleCount ?? (f.people?.length || 0),
+                    people: f.people || [],
+                    hqLocation: f.hqLocation || null
+                }));
 
-        function isGeneratedSampleData(list) {
-            return Array.isArray(list) && list.length > 0 &&
-                list.every(firm => typeof firm.id === 'string' && /^firm_\d{13}_\d+$/.test(firm.id));
-        }
-
-        function setSortButtonActive(type) {
-            document.querySelectorAll('[data-sort-button]').forEach(btn => {
-                if (btn.dataset.sort === type) {
-                    btn.classList.add('active');
+                if (dataset.length && (!stored.length || source === 'dataset' || source === 'sample')) {
+                    state.firms = dataset;
+                    persistFirms('dataset');
+                } else if (stored.length) {
+                    state.firms = stored.map(withBasePosition);
                 } else {
-                    btn.classList.remove('active');
+                    state.firms = generateSampleData();
+                    persistFirms('sample');
                 }
-            });
-        }
-
-        function persistFirms(source, list = firms) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-            if (source) {
-                localStorage.setItem(SOURCE_KEY, source);
+            } catch (e) {
+                state.firms = generateSampleData();
+                persistFirms('sample');
             }
-        }
-
-        function restoreScatterPositions() {
-            const panel = document.getElementById('firm-panel');
-            const panelOpen = panel.classList.contains('open');
-            const currentId = currentFirm ? currentFirm.id : null;
-            const hoveredId = hoveredFirm ? hoveredFirm.id : null;
-
-            firms = firms.map(firm => {
-                const normalized = withBasePosition(firm);
-                normalized.x = normalized.baseX;
-                normalized.y = normalized.baseY;
-                return normalized;
-            });
-
-            persistFirms();
-
-            if (currentId) {
-                currentFirm = firms.find(f => f.id === currentId) || null;
-            }
-            if (hoveredId) {
-                hoveredFirm = firms.find(f => f.id === hoveredId) || null;
-            }
-
-            if (panelOpen && currentFirm) {
-                openFirmPanel(currentFirm);
-            }
-
-            if (viewMode === 'kanban') {
-                renderKanban();
-            }
-        }
-
-        function resetLayout() {
-            currentSort = 'none';
-            restoreScatterPositions();
-            setSortButtonActive('none');
-        }
-
-        const storedFirms = loadStoredFirms().map(firm => withBasePosition(firm));
-        const storedSource = localStorage.getItem(SOURCE_KEY);
-        const preferDataset = datasetFirms.length > 0 && (
-            storedFirms.length === 0 ||
-            storedSource === 'dataset' ||
-            storedSource === 'sample' ||
-            isGeneratedSampleData(storedFirms)
-        );
-
-        let firms = [];
-        if (preferDataset) {
-            firms = datasetFirms;
-            persistFirms('dataset', firms);
-        } else if (storedFirms.length > 0) {
-            firms = storedFirms;
-        } else {
-            firms = generateSampleData();
-            persistFirms('sample', firms);
-        }
-        let currentFirm = null;
-        let currentSort = 'none';
-        let viewMode = 'map';
-
-        // Canvas Setup
-        const canvas = document.getElementById('main-canvas');
-        const ctx = canvas.getContext('2d');
-        let camera = { x: 0, y: 0, zoom: 1 };
-        let isDragging = false;
-        let dragStart = { x: 0, y: 0 };
-        let hoveredFirm = null;
-        let animationTime = 0;
-
-        // Map variables
-        let mapSvg = null;
-        let mapG = null;
-        let mapProjection = null;
-        let mapZoom = null;
-
-        // Initialize
-        async function init() {
-            resizeCanvas();
-            persistFirms();
-            calculatePositions();
-            await initMap();
-            animate();
-            setupEventListeners();
-            setSortButtonActive(currentSort);
-            
-            // Ensure proper view is displayed on load
-            setView('map');
         }
 
         function generateSampleData() {
-            const firmNames = [
-                'Atlas Capital Partners', 'Vertex Ventures', 'Summit Partners', 'Silver Lake',
-                'Thoma Bravo', 'Vista Equity', 'Insight Partners', 'General Atlantic',
-                'KKR', 'Blackstone', 'Apollo', 'Carlyle Group', 'Warburg Pincus',
-                'TPG Capital', 'Advent International', 'CVC Capital', 'Permira',
-                'Bain Capital', 'Providence Equity', 'Hellman & Friedman'
-            ];
-
-            const cities = Object.keys(CITY_COORDS);
-
-            return firmNames.map((name, i) => {
-                const city = cities[Math.floor(Math.random() * cities.length)];
-                return withBasePosition({
-                    id: 'firm_' + Date.now() + '_' + i,
-                    name: name,
-                    aum: Math.random() * 100 + 1,
-                    stage: Math.floor(Math.random() * STAGE_COUNT) + 1,
-                    peopleCount: Math.floor(Math.random() * 50) + 5,
-                    x: Math.random() * 2000 - 1000,
-                    y: Math.random() * 2000 - 1000,
-                    people: generatePeople(),
-                    hqLocation: city
-                });
-            });
+            const names = ['Atlas Capital','Vertex Ventures','Summit Partners','Silver Lake','Thoma Bravo',
+                'Vista Equity','Insight Partners','General Atlantic','KKR','Blackstone'];
+            const cities = Object.keys(CONFIG.CITY_COORDS);
+            return names.map((name,i) => withBasePosition({
+                id: `firm_${Date.now()}_${i}`,
+                name,
+                aum: Math.random()*100+1,
+                stage: Math.floor(Math.random()*CONFIG.STAGE_NAMES.length)+1,
+                peopleCount: Math.floor(Math.random()*50)+5,
+                people: [],
+                hqLocation: cities[Math.floor(Math.random()*cities.length)]
+            }));
         }
 
-        function generatePeople() {
-            const roles = ['GP', 'MD', 'Principal', 'VP', 'Associate'];
-            const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily'];
-            const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Davis'];
-            
-            const people = [];
-            const count = Math.floor(Math.random() * 8) + 3;
-            
-            for (let i = 0; i < count; i++) {
-                people.push({
-                    id: 'person_' + Date.now() + '_' + i,
-                    name: firstNames[Math.floor(Math.random() * firstNames.length)] + ' ' + 
-                          lastNames[Math.floor(Math.random() * lastNames.length)],
-                    role: roles[Math.floor(Math.random() * roles.length)],
-                    title: roles[Math.floor(Math.random() * roles.length)],
-                    lastContact: Math.random() > 0.5 ? 
-                        new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString() : null
-                });
-            }
-            
-            return people;
+        function persistFirms(source) {
+            localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(state.firms));
+            if (source) localStorage.setItem(CONFIG.SOURCE_KEY, source);
         }
 
-        // Map initialization
-        async function initMap() {
-            const container = document.getElementById('map-container');
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-
-            // Setup D3 map
-            mapSvg = d3.select('#world-map');
-            mapG = mapSvg.append('g');
-
-            // Setup projection
-            mapProjection = d3.geoMercator()
-                .scale((width / 2 / Math.PI) * 0.8)
-                .translate([width / 2, height / 1.8]);
-
-            const path = d3.geoPath().projection(mapProjection);
-
-            // Setup zoom behavior
-            mapZoom = d3.zoom()
-                .scaleExtent([0.5, 8])
-                .on('zoom', (event) => {
-                    mapG.attr('transform', event.transform);
-                    // Adjust label font size inversely to zoom scale
-                    const scale = event.transform.k;
-                    mapG.selectAll('.map-bubble-label')
-                        .style('font-size', `${11 / Math.sqrt(scale)}px`);
-                });
-
-            mapSvg.call(mapZoom);
-
-            // Load world map data
-            try {
-                const world = await d3.json('https://unpkg.com/world-atlas@2.0.2/countries-110m.json');
-                const countries = topojson.feature(world, world.objects.countries);
-
-                // Calculate average stage per country
-                const countryStages = {};
-                firms.forEach(firm => {
-                    if (firm.hqLocation && CITY_TO_COUNTRY[firm.hqLocation]) {
-                        const country = CITY_TO_COUNTRY[firm.hqLocation];
-                        if (!countryStages[country]) {
-                            countryStages[country] = { total: 0, count: 0, stages: [] };
-                        }
-                        countryStages[country].stages.push(firm.stage);
-                        countryStages[country].total += firm.stage;
-                        countryStages[country].count++;
-                    }
-                });
-
-                // Calculate average stages
-                Object.keys(countryStages).forEach(country => {
-                    countryStages[country].average = countryStages[country].total / countryStages[country].count;
-                });
-
-                // Draw countries with shading based on firm stages
-                mapG.selectAll('path')
-                    .data(countries.features)
-                    .join('path')
-                    .attr('class', 'map-country')
-                    .attr('d', path)
-                    .style('fill', (d) => {
-                        // Try to match country by ISO code (this is approximation as world-atlas IDs vary)
-                        const countryId = d.id;
-                        let countryCode = null;
-                        
-                        // Map numeric IDs to country codes (common ones from world-atlas)
-                        const idToCountry = {
-                            840: 'USA',
-                            826: 'GBR',
-                            250: 'FRA',
-                            442: 'LUX',
-                            376: 'ISR',
-                            156: 'CHN',
-                            036: 'AUS',
-                            784: 'ARE',
-                            124: 'CAN',
-                            756: 'CHE',
-                            276: 'DEU'
-                        };
-                        
-                        countryCode = idToCountry[countryId];
-                        
-                        if (countryCode && countryStages[countryCode]) {
-                            const avgStage = countryStages[countryCode].average;
-                            const stageIndex = Math.round(avgStage);
-                            const color = getStageColor(stageIndex);
-                            return color + '30'; // 30% opacity for subtle shading
-                        }
-                        return 'rgba(30, 41, 59, 0.5)'; // Default country color
-                    });
-
-                // Draw firms
-                updateMapBubbles();
-            } catch (error) {
-                console.error('Error loading map data:', error);
-            }
-        }
-
-        // Update country shading based on firm stages
-        function updateCountryShading() {
-            if (!mapG) return;
-
-            // Calculate average stage per country
-            const countryStages = {};
-            firms.forEach(firm => {
-                if (firm.hqLocation && CITY_TO_COUNTRY[firm.hqLocation]) {
-                    const country = CITY_TO_COUNTRY[firm.hqLocation];
-                    if (!countryStages[country]) {
-                        countryStages[country] = { total: 0, count: 0 };
-                    }
-                    countryStages[country].total += firm.stage;
-                    countryStages[country].count++;
-                }
-            });
-
-            // Calculate averages
-            Object.keys(countryStages).forEach(country => {
-                countryStages[country].average = countryStages[country].total / countryStages[country].count;
-            });
-
-            // Update country colors
-            mapG.selectAll('.map-country')
-                .transition()
-                .duration(500)
-                .style('fill', function(d) {
-                    const countryId = d.id;
-                    const idToCountry = {
-                        840: 'USA',
-                        826: 'GBR',
-                        250: 'FRA',
-                        442: 'LUX',
-                        376: 'ISR',
-                        156: 'CHN',
-                        036: 'AUS',
-                        784: 'ARE',
-                        124: 'CAN',
-                        756: 'CHE',
-                        276: 'DEU'
-                    };
-                    
-                    const countryCode = idToCountry[countryId];
-                    
-                    if (countryCode && countryStages[countryCode]) {
-                        const avgStage = countryStages[countryCode].average;
-                        const stageIndex = Math.round(avgStage);
-                        const color = getStageColor(stageIndex);
-                        return color + '30'; // 30% opacity for subtle shading
-                    }
-                    return 'rgba(30, 41, 59, 0.5)';
-                });
-        }
-
-        // Update map bubbles
-        function updateMapBubbles() {
-            if (!mapG || !mapProjection) return;
-
-            // Update country shading first
-            updateCountryShading();
-
-            const geocodedFirms = firms.filter(f => f.hqLocation && CITY_COORDS[f.hqLocation]);
-
-            // Remove existing bubbles
-            mapG.selectAll('.map-bubble-group').remove();
-
-            // Create bubble groups
-            const bubbleGroups = mapG.selectAll('.map-bubble-group')
-                .data(geocodedFirms)
-                .enter()
-                .append('g')
-                .attr('class', 'map-bubble-group');
-
-            // Add bubbles
-            bubbleGroups.append('circle')
-                .attr('class', 'map-bubble')
-                .attr('r', d => Math.max(4, Math.sqrt(d.aum) * 0.6))  // 2x larger bubbles
-                .attr('cx', d => mapProjection([CITY_COORDS[d.hqLocation][1], CITY_COORDS[d.hqLocation][0]])[0])
-                .attr('cy', d => mapProjection([CITY_COORDS[d.hqLocation][1], CITY_COORDS[d.hqLocation][0]])[1])
-                .style('fill', d => getStageColor(d.stage))
-                .on('click', (event, d) => {
-                    event.stopPropagation();
-                    openFirmPanel(d);
-                })
-                .on('mouseover', function(event, d) {
-                    d3.select(this)
-                        .transition()
-                        .duration(200)
-                        .attr('r', Math.max(6, Math.sqrt(d.aum) * 0.8));
-                    
-                    // Show tooltip
-                    const tooltip = document.querySelector('.map-tooltip');
-                    tooltip.innerHTML = `
-                        <strong>${d.name}</strong><br>
-                        AUM: $${d.aum.toFixed(1)}B<br>
-                        HQ: ${d.hqLocation}<br>
-                        Stage: ${getStageName(d.stage)}
-                    `;
-                    tooltip.style.left = (event.pageX + 10) + 'px';
-                    tooltip.style.top = (event.pageY - 10) + 'px';
-                    tooltip.classList.add('visible');
-                })
-                .on('mouseout', function(event, d) {
-                    d3.select(this)
-                        .transition()
-                        .duration(200)
-                        .attr('r', Math.max(4, Math.sqrt(d.aum) * 0.6));
-                    
-                    // Hide tooltip
-                    document.querySelector('.map-tooltip').classList.remove('visible');
-                });
-
-            // Add labels (hidden by default, shown on hover)
-            bubbleGroups.append('text')
-                .attr('class', 'map-bubble-label')
-                .attr('x', d => mapProjection([CITY_COORDS[d.hqLocation][1], CITY_COORDS[d.hqLocation][0]])[0])
-                .attr('y', d => mapProjection([CITY_COORDS[d.hqLocation][1], CITY_COORDS[d.hqLocation][0]])[1] + Math.max(4, Math.sqrt(d.aum) * 0.6) + 12)
-                .style('font-size', '11px')
-                .text(d => d.name);
-        }
-
-        function calculatePositions() {
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            const radius = 300;
-            
-            if (currentSort === 'aum') {
-                firms.sort((a, b) => b.aum - a.aum);
-                arrangeInGrid();
-            } else if (currentSort === 'stage') {
-                firms.sort((a, b) => b.stage - a.stage);
-                arrangeInGrid();
-            } else if (currentSort === 'people') {
-                firms.sort((a, b) => b.peopleCount - a.peopleCount);
-                arrangeInGrid();
-            } else {
-                // Force-directed layout simulation
-                for (let i = 0; i < firms.length; i++) {
-                    if (!Number.isFinite(firms[i].x) || !Number.isFinite(firms[i].y)) {
-                        if (Number.isFinite(firms[i].baseX) && Number.isFinite(firms[i].baseY)) {
-                            firms[i].x = firms[i].baseX;
-                            firms[i].y = firms[i].baseY;
-                        } else {
-                            const normalized = withBasePosition(firms[i]);
-                            firms[i].baseX = normalized.baseX;
-                            firms[i].baseY = normalized.baseY;
-                            firms[i].x = normalized.x;
-                            firms[i].y = normalized.y;
-                        }
-                    }
-                }
-            }
-            
-            persistFirms();
-        }
-
-        function arrangeInGrid() {
-            const cols = Math.ceil(Math.sqrt(firms.length));
-            const spacing = 150;
-            const startX = 100;
-            const startY = 100;
-            
-            firms.forEach((firm, i) => {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                firm.x = startX + col * spacing;
-                firm.y = startY + row * spacing;
-            });
+        // Canvas functions
+        function setupCanvas() {
+            state.canvas = $('main-canvas');
+            state.ctx = state.canvas.getContext('2d');
+            resizeCanvas();
         }
 
         function resizeCanvas() {
-            const container = document.getElementById('canvas-container');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            const container = $('canvas-container');
+            state.canvas.width = container.clientWidth;
+            state.canvas.height = container.clientHeight;
+        }
+
+        function startAnimation() {
+            if (!state.animationFrame) {
+                state.animationFrame = requestAnimationFrame(animate);
+            }
+        }
+
+        function stopAnimation() {
+            if (state.animationFrame) {
+                cancelAnimationFrame(state.animationFrame);
+                state.animationFrame = null;
+            }
         }
 
         function animate() {
-            if (viewMode === 'scatter') {
-                animationTime += 0.02;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (state.viewMode !== 'scatter') {
+                stopAnimation();
+                return;
+            }
+            const {ctx, canvas, camera, firms} = state;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+            ctx.scale(camera.zoom, camera.zoom);
+            ctx.translate(-canvas.width/2 + camera.x, -canvas.height/2 + camera.y);
+            
+            firms.forEach(firm => {
+                const radius = Math.sqrt(firm.aum) * 5;
+                const isHovered = state.hoveredFirm?.id === firm.id;
+                const scale = isHovered ? 1.1 : 1;
                 
                 ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.scale(camera.zoom, camera.zoom);
-                ctx.translate(-canvas.width / 2 + camera.x, -canvas.height / 2 + camera.y);
+                ctx.translate(firm.x, firm.y);
+                ctx.scale(scale, scale);
                 
-                // Draw connections (optional)
-                ctx.strokeStyle = 'rgba(100, 116, 139, 0.1)';
-                ctx.lineWidth = 1;
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+                const color = getStageColor(firm.stage);
+                gradient.addColorStop(0, color + '80');
+                gradient.addColorStop(1, color + '20');
                 
-                // Draw firms
-                firms.forEach(firm => {
-                    drawFirm(firm);
-                });
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = `${Math.min(14, radius/3)}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(firm.name, 0, -5);
+                
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = `${Math.min(11, radius/4)}px sans-serif`;
+                ctx.fillText(`${firm.aum.toFixed(1)}B`, 0, 10);
                 
                 ctx.restore();
-            }
-            requestAnimationFrame(animate);
-        }
-
-        function drawFirm(firm) {
-            const radius = Math.sqrt(firm.aum) * 5;
-            const isHovered = hoveredFirm && hoveredFirm.id === firm.id;
-            const scale = isHovered ? 1.1 : 1;
-            const pulse = isHovered ? (Math.sin(animationTime + firm.x * 0.01) * 0.05 + 1) : 1;
-            
-            // Draw bubble
-            ctx.save();
-            ctx.translate(firm.x, firm.y);
-            ctx.scale(scale * pulse, scale * pulse);
-            
-            // Gradient based on stage
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
-            const stageColor = getStageColor(firm.stage);
-            gradient.addColorStop(0, stageColor + '80');
-            gradient.addColorStop(1, stageColor + '20');
-            
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(0, 0, radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Border
-            ctx.strokeStyle = stageColor;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Draw firm name
-            ctx.fillStyle = '#e2e8f0';
-            ctx.font = `${Math.min(14, radius / 3)}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(firm.name, 0, -5);
-            
-            // Draw AUM
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = `${Math.min(11, radius / 4)}px sans-serif`;
-            ctx.fillText(`${firm.aum.toFixed(1)}B`, 0, 10);
+            });
             
             ctx.restore();
+            state.animationFrame = requestAnimationFrame(animate);
         }
 
-        function getStageColor(stage) {
-            const index = normalizeStage(stage);
-            return STAGE_COLORS[index - 1] || STAGE_COLORS[0];
+        // Map functions
+        async function initMap() {
+            const container = $('map-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            state.mapSvg = d3.select('#world-map');
+            state.mapG = state.mapSvg.append('g');
+            state.mapProjection = d3.geoMercator()
+                .scale((width/2/Math.PI)*0.8)
+                .translate([width/2, height/1.8]);
+            
+            const path = d3.geoPath().projection(state.mapProjection);
+            
+            state.mapZoom = d3.zoom()
+                .scaleExtent([0.5, 8])
+                .on('zoom', event => {
+                    state.mapG.attr('transform', event.transform);
+                    state.mapG.selectAll('.map-bubble-label')
+                        .style('font-size', `${11/Math.sqrt(event.transform.k)}px`);
+                });
+            
+            state.mapSvg.call(state.mapZoom);
+            
+            try {
+                const world = await d3.json('https://unpkg.com/world-atlas@2.0.2/countries-110m.json');
+                const countries = topojson.feature(world, world.objects.countries);
+                
+                state.mapG.selectAll('path')
+                    .data(countries.features)
+                    .join('path')
+                    .attr('class', 'map-country')
+                    .attr('d', path);
+                
+                updateMapBubbles();
+            } catch (e) {
+                console.error('Error loading map:', e);
+            }
         }
 
-        function setupEventListeners() {
-            // Canvas interactions
-            canvas.addEventListener('mousedown', onMouseDown);
-            canvas.addEventListener('mousemove', onMouseMove);
-            canvas.addEventListener('mouseup', onMouseUp);
-            canvas.addEventListener('wheel', onWheel);
-            canvas.addEventListener('click', onClick);
+        function updateMapBubbles() {
+            if (!state.mapG) return;
             
-            // Search
-            document.getElementById('search-input').addEventListener('input', onSearch);
-            
-            // View controls
-            document.getElementById('view-map').addEventListener('click', () => setView('map'));
-            document.getElementById('view-scatter').addEventListener('click', () => setView('scatter'));
-            document.getElementById('view-kanban').addEventListener('click', () => setView('kanban'));
-
-            // Sort controls
-            document.getElementById('sort-aum').addEventListener('click', () => sortBy('aum'));
-            document.getElementById('sort-stage').addEventListener('click', () => sortBy('stage'));
-            document.getElementById('sort-people').addEventListener('click', () => sortBy('people'));
-            document.getElementById('sort-reset').addEventListener('click', resetLayout);
-            
-            // Data controls
-            document.getElementById('add-firm').addEventListener('click', openAddFirmModal);
-            document.getElementById('export-data').addEventListener('click', exportData);
-            document.getElementById('import-data').addEventListener('click', importData);
-            
-            // Form
-            document.getElementById('firm-form').addEventListener('submit', saveFirm);
-            
-            // Window resize
-            window.addEventListener('resize', () => {
-                resizeCanvas();
-                if (viewMode === 'map' && mapProjection) {
-                    const container = document.getElementById('map-container');
-                    const width = container.clientWidth;
-                    const height = container.clientHeight;
-                    mapProjection
-                        .scale((width / 2 / Math.PI) * 0.8)
-                        .translate([width / 2, height / 1.8]);
-                    updateMapBubbles();
+            const countryStages = {};
+            state.firms.forEach(f => {
+                const country = CONFIG.CITY_TO_COUNTRY[f.hqLocation];
+                if (country) {
+                    if (!countryStages[country]) countryStages[country] = {total:0, count:0};
+                    countryStages[country].total += f.stage;
+                    countryStages[country].count++;
                 }
             });
-        }
-
-        function onMouseDown(e) {
-            if (viewMode !== 'scatter') return;
-            isDragging = true;
-            dragStart = { x: e.clientX - camera.x, y: e.clientY - camera.y };
-            canvas.style.cursor = 'grabbing';
-        }
-
-        function onMouseMove(e) {
-            if (viewMode !== 'scatter') return;
-            if (isDragging) {
-                camera.x = e.clientX - dragStart.x;
-                camera.y = e.clientY - dragStart.y;
-            } else {
-                const rect = canvas.getBoundingClientRect();
-                const x = (e.clientX - rect.left - canvas.width / 2) / camera.zoom + canvas.width / 2 - camera.x;
-                const y = (e.clientY - rect.top - canvas.height / 2) / camera.zoom + canvas.height / 2 - camera.y;
-                
-                hoveredFirm = null;
-                for (const firm of firms) {
-                    const radius = Math.sqrt(firm.aum) * 5;
-                    const dx = x - firm.x;
-                    const dy = y - firm.y;
-                    if (Math.sqrt(dx * dx + dy * dy) < radius) {
-                        hoveredFirm = firm;
-                        canvas.style.cursor = 'pointer';
-                        break;
+            
+            Object.keys(countryStages).forEach(c => {
+                countryStages[c].average = countryStages[c].total / countryStages[c].count;
+            });
+            
+            state.mapG.selectAll('.map-country')
+                .transition().duration(500)
+                .style('fill', d => {
+                    const country = CONFIG.COUNTRY_IDS[d.id];
+                    if (country && countryStages[country]) {
+                        return getStageColor(Math.round(countryStages[country].average)) + '30';
                     }
-                }
-                
-                if (!hoveredFirm) {
-                    canvas.style.cursor = 'grab';
-                }
-            }
-        }
-
-        function onMouseUp() {
-            if (viewMode !== 'scatter') return;
-            isDragging = false;
-            canvas.style.cursor = 'grab';
-        }
-
-        function onWheel(e) {
-            if (viewMode !== 'scatter') return;
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            camera.zoom = Math.max(0.1, Math.min(3, camera.zoom * delta));
-        }
-
-        function onClick(e) {
-            if (viewMode !== 'scatter') return;
-            if (hoveredFirm) {
-                openFirmPanel(hoveredFirm);
-            }
-        }
-
-        function onSearch(e) {
-            const query = e.target.value.toLowerCase();
-            if (query.length < 2) return;
+                    return 'rgba(30,41,59,0.5)';
+                });
             
-            const found = firms.find(f => f.name.toLowerCase().includes(query));
-            if (found) {
-                if (viewMode === 'scatter') {
-                    // Animate camera to firm
-                    const targetX = -found.x + canvas.width / 2;
-                    const targetY = -found.y + canvas.height / 2;
-                    
-                    animateTo(targetX, targetY, 1.5);
-                    hoveredFirm = found;
-                } else if (viewMode === 'map' && found.hqLocation && CITY_COORDS[found.hqLocation]) {
-                    // Zoom to firm location on map
-                    const coords = CITY_COORDS[found.hqLocation];
-                    const [x, y] = mapProjection([coords[1], coords[0]]);
-                    
-                    mapSvg.transition()
-                        .duration(750)
-                        .call(
-                            mapZoom.transform,
-                            d3.zoomIdentity
-                                .translate(window.innerWidth / 2, window.innerHeight / 2)
-                                .scale(4)
-                                .translate(-x, -y)
-                        );
-                    
-                    // Highlight the bubble
-                    mapG.selectAll('.map-bubble')
-                        .filter(d => d.id === found.id)
-                        .transition()
-                        .duration(300)
-                        .attr('r', Math.max(8, Math.sqrt(found.aum) * 1.2))
-                        .transition()
-                        .duration(300)
-                        .attr('r', Math.max(4, Math.sqrt(found.aum) * 0.6));
-                }
-            }
+            const geocoded = state.firms.filter(f => f.hqLocation && CONFIG.CITY_COORDS[f.hqLocation]);
+            
+            state.mapG.selectAll('.map-bubble-group').remove();
+            
+            const groups = state.mapG.selectAll('.map-bubble-group')
+                .data(geocoded)
+                .enter().append('g')
+                .attr('class', 'map-bubble-group');
+            
+            groups.append('circle')
+                .attr('class', 'map-bubble')
+                .attr('r', d => Math.max(4, Math.sqrt(d.aum)*0.6))
+                .attr('cx', d => state.mapProjection([CONFIG.CITY_COORDS[d.hqLocation][1], CONFIG.CITY_COORDS[d.hqLocation][0]])[0])
+                .attr('cy', d => state.mapProjection([CONFIG.CITY_COORDS[d.hqLocation][1], CONFIG.CITY_COORDS[d.hqLocation][0]])[1])
+                .style('fill', d => getStageColor(d.stage))
+                .on('click', (e,d) => {e.stopPropagation(); openFirmPanel(d);})
+                .on('mouseover', function(e,d) {
+                    d3.select(this).transition().duration(200).attr('r', Math.max(6, Math.sqrt(d.aum)*0.8));
+                    const tooltip = document.querySelector('.map-tooltip');
+                    tooltip.innerHTML = `<strong>${d.name}</strong><br>AUM: $${d.aum.toFixed(1)}B<br>HQ: ${d.hqLocation}<br>Stage: ${getStageName(d.stage)}`;
+                    tooltip.style.left = (e.pageX+10)+'px';
+                    tooltip.style.top = (e.pageY-10)+'px';
+                    tooltip.classList.add('visible');
+                })
+                .on('mouseout', function(e,d) {
+                    d3.select(this).transition().duration(200).attr('r', Math.max(4, Math.sqrt(d.aum)*0.6));
+                    document.querySelector('.map-tooltip').classList.remove('visible');
+                });
+            
+            groups.append('text')
+                .attr('class', 'map-bubble-label')
+                .attr('x', d => state.mapProjection([CONFIG.CITY_COORDS[d.hqLocation][1], CONFIG.CITY_COORDS[d.hqLocation][0]])[0])
+                .attr('y', d => state.mapProjection([CONFIG.CITY_COORDS[d.hqLocation][1], CONFIG.CITY_COORDS[d.hqLocation][0]])[1] + Math.max(4, Math.sqrt(d.aum)*0.6) + 12)
+                .text(d => d.name);
         }
 
-        function animateTo(targetX, targetY, targetZoom) {
-            const steps = 30;
-            let step = 0;
-            
-            const startX = camera.x;
-            const startY = camera.y;
-            const startZoom = camera.zoom;
-            
-            function animate() {
-                step++;
-                const progress = step / steps;
-                const eased = 1 - Math.pow(1 - progress, 3);
-                
-                camera.x = startX + (targetX - startX) * eased;
-                camera.y = startY + (targetY - startY) * eased;
-                camera.zoom = startZoom + (targetZoom - startZoom) * eased;
-                
-                if (step < steps) {
-                    requestAnimationFrame(animate);
-                }
-            }
-            animate();
-        }
-
+        // View management
         function setView(mode) {
-            viewMode = mode;
+            state.viewMode = mode;
             
-            // Hide all views
-            document.getElementById('map-container').classList.remove('active');
-            document.getElementById('canvas-container').style.display = 'none';
-            document.getElementById('kanban-view').classList.remove('active');
-            
-            // Remove active class from all view buttons
-            document.getElementById('view-map').classList.remove('active');
-            document.getElementById('view-scatter').classList.remove('active');
-            document.getElementById('view-kanban').classList.remove('active');
-            
-            // Hide/show sort buttons
-            const sortButtons = document.querySelectorAll('[data-sort-button]');
+            document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('#view-map, #view-scatter, #view-kanban').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('[data-sort]').forEach(b => b.style.display = 'none');
             
             if (mode === 'map') {
-                document.getElementById('map-container').classList.add('active');
-                document.getElementById('view-map').classList.add('active');
-                sortButtons.forEach(btn => btn.style.display = 'none');
+                $('map-container').classList.add('active');
+                $('view-map').classList.add('active');
+                stopAnimation();
                 updateMapBubbles();
             } else if (mode === 'scatter') {
-                document.getElementById('canvas-container').style.display = 'flex';  // Use flex to work with parent flexbox
-                document.getElementById('view-scatter').classList.add('active');
-                sortButtons.forEach(btn => btn.style.display = 'inline-block');
-                // Resize canvas since it was hidden
+                $('canvas-container').classList.add('active');
+                $('view-scatter').classList.add('active');
+                document.querySelectorAll('[data-sort]').forEach(b => b.style.display = 'inline-block');
                 resizeCanvas();
+                startAnimation();
             } else if (mode === 'kanban') {
-                document.getElementById('kanban-view').classList.add('active');
-                document.getElementById('view-kanban').classList.add('active');
-                sortButtons.forEach(btn => btn.style.display = 'none');
+                $('kanban-view').classList.add('active');
+                $('view-kanban').classList.add('active');
+                stopAnimation();
                 renderKanban();
             }
         }
 
         function renderKanban() {
-            const kanbanView = document.getElementById('kanban-view');
-            kanbanView.innerHTML = '';
+            const container = $('kanban-view');
+            container.innerHTML = CONFIG.STAGE_NAMES.map((name, i) => {
+                const firms = state.firms.filter(f => f.stage === i + 1);
+                return `
+                    <div class="kanban-column" data-stage="${i+1}">
+                        <div class="kanban-header stage-${i+1}">${i+1}. ${name}</div>
+                        ${firms.map(f => `
+                            <div class="kanban-card" draggable="true" data-firm-id="${f.id}">
+                                <div class="kanban-card-name">${f.name}</div>
+                                <div class="kanban-card-aum">$${f.aum.toFixed(1)}B AUM</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }).join('');
             
-            STAGE_NAMES.forEach((stageName, i) => {
-                const column = document.createElement('div');
-                column.className = 'kanban-column';
-                column.dataset.stage = i + 1;
-                
-                const header = document.createElement('div');
-                header.className = 'kanban-header stage-' + (i + 1);
-                header.textContent = `${i + 1}. ${stageName}`;
-                column.appendChild(header);
-                
-                const firmsInStage = firms.filter(f => f.stage === i + 1);
-                firmsInStage.forEach(firm => {
-                    const card = document.createElement('div');
-                    card.className = 'kanban-card';
-                    card.draggable = true;
-                    card.dataset.firmId = firm.id;
-                    
-                    card.innerHTML = `
-                        <div class="kanban-card-name">${firm.name}</div>
-                        <div class="kanban-card-aum">$${firm.aum.toFixed(1)}B AUM</div>
-                    `;
-                    
-                    card.addEventListener('click', () => openFirmPanel(firm));
-                    card.addEventListener('dragstart', (e) => {
-                        e.dataTransfer.setData('firmId', firm.id);
-                    });
-                    
-                    column.appendChild(card);
-                });
-                
-                column.addEventListener('dragover', (e) => e.preventDefault());
-                column.addEventListener('drop', (e) => {
+            container.querySelectorAll('.kanban-card').forEach(card => {
+                card.onclick = () => openFirmPanel(state.firms.find(f => f.id === card.dataset.firmId));
+                card.ondragstart = e => e.dataTransfer.setData('firmId', card.dataset.firmId);
+            });
+            
+            container.querySelectorAll('.kanban-column').forEach(col => {
+                col.ondragover = e => e.preventDefault();
+                col.ondrop = e => {
                     e.preventDefault();
-                    const firmId = e.dataTransfer.getData('firmId');
-                    const firm = firms.find(f => f.id === firmId);
+                    const firm = state.firms.find(f => f.id === e.dataTransfer.getData('firmId'));
                     if (firm) {
-                        const newStage = normalizeStage(column.dataset.stage);
-                        firm.stage = newStage;
-                        if (currentFirm && currentFirm.id === firm.id) {
-                            currentFirm.stage = newStage;
-                        }
-                        persistFirms('user');
-                        calculatePositions();
+                        firm.stage = normalizeStage(col.dataset.stage);
+                        persistFirms();
                         renderKanban();
-                        updateMapBubbles(); // This now includes country shading update
-                        if (currentFirm && currentFirm.id === firm.id) {
-                            openFirmPanel(currentFirm);
-                        }
-                    }
-                });
-                
-                kanbanView.appendChild(column);
-            });
-        }
-
-        function sortBy(type) {
-            if (viewMode !== 'scatter') return;
-            currentSort = type;
-            calculatePositions();
-            setSortButtonActive(type);
-        }
-
-        function openFirmPanel(firm) {
-            currentFirm = firm;
-            const panel = document.getElementById('firm-panel');
-            panel.classList.add('open');
-            
-            document.getElementById('panel-firm-name').textContent = firm.name;
-            document.getElementById('panel-firm-aum').textContent = `$${firm.aum.toFixed(1)}B AUM`;
-            
-            const stageEl = document.getElementById('panel-stage');
-            const stageIndex = normalizeStage(firm.stage);
-            const stageLabel = getStageName(stageIndex);
-            stageEl.textContent = `${stageIndex}. ${stageLabel}`;
-            stageEl.className = 'stage-indicator stage-' + stageIndex;
-            
-            const progressFill = document.getElementById('progress-fill');
-            const stageProgress = STAGE_COUNT > 1 ? (stageIndex - 1) / (STAGE_COUNT - 1) : 1;
-            progressFill.style.width = `${stageProgress * 100}%`;
-            
-            renderPeople(firm);
-        }
-
-        function closeFirmPanel() {
-            document.getElementById('firm-panel').classList.remove('open');
-            currentFirm = null;
-        }
-
-        function renderPeople(firm) {
-            const peopleGrid = document.getElementById('people-grid');
-            peopleGrid.innerHTML = '';
-            
-            const roleGroups = {
-                'GP': [],
-                'MD': [],
-                'Principal': [],
-                'VP': [],
-                'Associate': [],
-                'Other': []
-            };
-            
-            (firm.people || []).forEach(person => {
-                const role = person.role || 'Other';
-                if (roleGroups[role]) {
-                    roleGroups[role].push(person);
-                } else {
-                    roleGroups['Other'].push(person);
-                }
-            });
-            
-            Object.entries(roleGroups).forEach(([role, people]) => {
-                if (people.length === 0) return;
-                
-                const group = document.createElement('div');
-                group.className = 'role-group';
-                
-                const title = document.createElement('div');
-                title.className = 'role-title';
-                title.textContent = role;
-                group.appendChild(title);
-                
-                people.forEach(person => {
-                    const bubble = document.createElement('div');
-                    bubble.className = 'person-bubble';
-                    
-                    const lastContactText = person.lastContact ? 
-                        `${Math.floor((Date.now() - new Date(person.lastContact)) / (24 * 60 * 60 * 1000))}d ago` : 
-                        'No contact';
-                    
-                    bubble.innerHTML = `
-                        <div class="person-name">${person.name}</div>
-                        <div class="person-title">${person.title || role}</div>
-                        <div class="last-contact">${lastContactText}</div>
-                    `;
-                    
-                    group.appendChild(bubble);
-                });
-                
-                peopleGrid.appendChild(group);
-            });
-        }
-
-        function openAddFirmModal() {
-            document.getElementById('data-modal').classList.add('open');
-            document.getElementById('modal-title').textContent = 'Add New Firm';
-            document.getElementById('firm-form').reset();
-        }
-
-        function closeModal() {
-            document.getElementById('data-modal').classList.remove('open');
-        }
-
-        function saveFirm(e) {
-            e.preventDefault();
-            
-            const newFirm = {
-                id: 'firm_' + Date.now(),
-                name: document.getElementById('form-name').value,
-                aum: parseFloat(document.getElementById('form-aum').value),
-                stage: normalizeStage(document.getElementById('form-stage').value),
-                peopleCount: parseInt(document.getElementById('form-people-count').value) || 0,
-                x: Math.random() * 1000,
-                y: Math.random() * 1000,
-                people: [],
-                hqLocation: document.getElementById('form-location').value || null
-            };
-
-            const normalizedFirm = withBasePosition(newFirm);
-            
-            firms.push(normalizedFirm);
-            persistFirms('user');
-            calculatePositions();
-            updateMapBubbles();
-            closeModal();
-        }
-
-        function addPerson() {
-            if (!currentFirm) return;
-            
-            const name = prompt('Enter person name:');
-            if (!name) return;
-            
-            const role = prompt('Enter role (GP/MD/Principal/VP/Associate/Other):') || 'Other';
-            const title = prompt('Enter specific title:') || role;
-            
-            if (!currentFirm.people) currentFirm.people = [];
-            
-            currentFirm.people.push({
-                id: 'person_' + Date.now(),
-                name: name,
-                role: role,
-                title: title,
-                lastContact: new Date().toISOString()
-            });
-            
-            persistFirms('user');
-            renderPeople(currentFirm);
-        }
-
-        function exportData() {
-            const dataStr = JSON.stringify(firms, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            
-            const exportName = 'pe_firms_' + new Date().toISOString().slice(0, 10) + '.json';
-            
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportName);
-            linkElement.click();
-        }
-
-        function importData() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'application/json';
-            
-            input.onchange = e => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                
-                reader.onload = event => {
-                    try {
-                        const imported = JSON.parse(event.target.result);
-                        firms = imported.map(firm => withBasePosition(firm));
-                        persistFirms('user');
-                        calculatePositions();
                         updateMapBubbles();
-                        setSortButtonActive(currentSort);
-                        alert('Data imported successfully!');
-                    } catch (error) {
-                        alert('Error importing data: ' + error.message);
+                        if (state.currentFirm?.id === firm.id) openFirmPanel(firm);
                     }
                 };
-                
-                reader.readAsText(file);
-            };
-            
-            input.click();
+            });
         }
 
-        // Initialize the application
+        // Sorting
+        function sortBy(type) {
+            if (state.viewMode !== 'scatter') return;
+            state.currentSort = type;
+            
+            if (type === 'none') {
+                state.firms = state.firms.map(f => ({...f, x: f.baseX, y: f.baseY}));
+            } else {
+                const sortKey = type === 'people' ? 'peopleCount' : type;
+                state.firms.sort((a,b) => b[sortKey] - a[sortKey]);
+                const cols = Math.ceil(Math.sqrt(state.firms.length));
+                state.firms.forEach((f,i) => {
+                    f.x = 100 + (i%cols) * 150;
+                    f.y = 100 + Math.floor(i/cols) * 150;
+                });
+            }
+            
+            document.querySelectorAll('[data-sort]').forEach(b => {
+                b.classList.toggle('active', b.dataset.sort === type);
+            });
+            persistFirms();
+        }
+
+        // Panel functions
+        function openFirmPanel(firm) {
+            state.currentFirm = firm;
+            $('firm-panel').classList.add('open');
+            $('panel-firm-name').textContent = firm.name;
+            $('panel-firm-aum').textContent = `$${firm.aum.toFixed(1)}B AUM`;
+            
+            const stage = normalizeStage(firm.stage);
+            const stageEl = $('panel-stage');
+            stageEl.textContent = `${stage}. ${getStageName(stage)}`;
+            stageEl.className = `stage-indicator stage-${stage}`;
+            
+            $('progress-fill').style.width = `${((stage-1)/(CONFIG.STAGE_NAMES.length-1))*100}%`;
+            
+            const peopleGrid = $('people-grid');
+            const roleGroups = {};
+            (firm.people || []).forEach(p => {
+                const role = p.role || 'Other';
+                if (!roleGroups[role]) roleGroups[role] = [];
+                roleGroups[role].push(p);
+            });
+            
+            peopleGrid.innerHTML = Object.entries(roleGroups).map(([role, people]) => 
+                people.length ? `
+                    <div class="role-group">
+                        <div class="role-title">${role}</div>
+                        ${people.map(p => `
+                            <div class="person-bubble">
+                                <div class="person-name">${p.name}</div>
+                                <div class="person-title">${p.title || role}</div>
+                                <div class="last-contact">${p.lastContact ? 
+                                    `${Math.floor((Date.now() - new Date(p.lastContact))/(24*60*60*1000))}d ago` : 
+                                    'No contact'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''
+            ).join('');
+        }
+
+        // Event handlers
+        function setupEventListeners() {
+            // Canvas events
+            const canvas = state.canvas;
+            canvas.onmousedown = e => {
+                if (state.viewMode !== 'scatter') return;
+                state.isDragging = true;
+                state.dragStart = {x: e.clientX - state.camera.x, y: e.clientY - state.camera.y};
+                canvas.style.cursor = 'grabbing';
+            };
+            
+            canvas.onmousemove = e => {
+                if (state.viewMode !== 'scatter') return;
+                if (state.isDragging) {
+                    state.camera.x = e.clientX - state.dragStart.x;
+                    state.camera.y = e.clientY - state.dragStart.y;
+                } else {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left - canvas.width/2)/state.camera.zoom + canvas.width/2 - state.camera.x;
+                    const y = (e.clientY - rect.top - canvas.height/2)/state.camera.zoom + canvas.height/2 - state.camera.y;
+                    
+                    state.hoveredFirm = null;
+                    for (const firm of state.firms) {
+                        const dx = x - firm.x, dy = y - firm.y;
+                        if (Math.sqrt(dx*dx + dy*dy) < Math.sqrt(firm.aum)*5) {
+                            state.hoveredFirm = firm;
+                            canvas.style.cursor = 'pointer';
+                            break;
+                        }
+                    }
+                    if (!state.hoveredFirm) canvas.style.cursor = 'grab';
+                }
+            };
+            
+            canvas.onmouseup = () => {
+                state.isDragging = false;
+                canvas.style.cursor = 'grab';
+            };
+            
+            canvas.onwheel = e => {
+                if (state.viewMode !== 'scatter') return;
+                e.preventDefault();
+                state.camera.zoom = Math.max(0.1, Math.min(3, state.camera.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+            };
+            
+            canvas.onclick = () => {
+                if (state.hoveredFirm) openFirmPanel(state.hoveredFirm);
+            };
+            
+            // Search
+            $('search-input').oninput = e => {
+                const query = e.target.value.toLowerCase();
+                if (query.length < 2) return;
+                const found = state.firms.find(f => f.name.toLowerCase().includes(query));
+                if (!found) return;
+                
+                if (state.viewMode === 'scatter') {
+                    const targetX = -found.x + canvas.width/2;
+                    const targetY = -found.y + canvas.height/2;
+                    const steps = 30;
+                    let step = 0;
+                    const startX = state.camera.x, startY = state.camera.y, startZoom = state.camera.zoom;
+                    
+                    function animateTo() {
+                        step++;
+                        const eased = 1 - Math.pow(1 - step/steps, 3);
+                        state.camera.x = startX + (targetX - startX) * eased;
+                        state.camera.y = startY + (targetY - startY) * eased;
+                        state.camera.zoom = startZoom + (1.5 - startZoom) * eased;
+                        if (step < steps) requestAnimationFrame(animateTo);
+                    }
+                    animateTo();
+                    state.hoveredFirm = found;
+                } else if (state.viewMode === 'map' && found.hqLocation && CONFIG.CITY_COORDS[found.hqLocation]) {
+                    const coords = CONFIG.CITY_COORDS[found.hqLocation];
+                    const [x,y] = state.mapProjection([coords[1], coords[0]]);
+                    state.mapSvg.transition().duration(750).call(
+                        state.mapZoom.transform,
+                        d3.zoomIdentity.translate(window.innerWidth/2, window.innerHeight/2).scale(4).translate(-x, -y)
+                    );
+                }
+            };
+            
+            // View buttons
+            $('view-map').onclick = () => setView('map');
+            $('view-scatter').onclick = () => setView('scatter');
+            $('view-kanban').onclick = () => setView('kanban');
+            
+            // Sort buttons
+            document.querySelectorAll('[data-sort]').forEach(btn => {
+                btn.onclick = () => sortBy(btn.dataset.sort);
+            });
+            
+            // Data buttons
+            $('add-firm').onclick = () => {
+                $('data-modal').classList.add('open');
+                $('firm-form').reset();
+            };
+            
+            $('export-data').onclick = () => {
+                const a = document.createElement('a');
+                a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state.firms, null, 2));
+                a.download = `pe_firms_${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+            };
+            
+            $('import-data').onclick = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'application/json';
+                input.onchange = e => {
+                    const reader = new FileReader();
+                    reader.onload = evt => {
+                        try {
+                            state.firms = JSON.parse(evt.target.result).map(withBasePosition);
+                            persistFirms('user');
+                            updateMapBubbles();
+                            alert('Data imported successfully!');
+                        } catch (err) {
+                            alert('Error importing data: ' + err.message);
+                        }
+                    };
+                    reader.readAsText(e.target.files[0]);
+                };
+                input.click();
+            };
+            
+            // Form
+            $('firm-form').onsubmit = e => {
+                e.preventDefault();
+                const newFirm = withBasePosition({
+                    id: 'firm_' + Date.now(),
+                    name: $('form-name').value,
+                    aum: parseFloat($('form-aum').value),
+                    stage: normalizeStage($('form-stage').value),
+                    peopleCount: parseInt($('form-people-count').value) || 0,
+                    people: [],
+                    hqLocation: $('form-location').value || null
+                });
+                state.firms.push(newFirm);
+                persistFirms('user');
+                updateMapBubbles();
+                $('data-modal').classList.remove('open');
+            };
+            
+            $('cancel-modal').onclick = () => $('data-modal').classList.remove('open');
+            $('close-panel').onclick = () => {
+                $('firm-panel').classList.remove('open');
+                state.currentFirm = null;
+            };
+            
+            $('add-person').onclick = () => {
+                if (!state.currentFirm) return;
+                const name = prompt('Enter person name:');
+                if (!name) return;
+                const role = prompt('Enter role (GP/MD/Principal/VP/Associate/Other):') || 'Other';
+                
+                if (!state.currentFirm.people) state.currentFirm.people = [];
+                state.currentFirm.people.push({
+                    id: 'person_' + Date.now(),
+                    name,
+                    role,
+                    title: role,
+                    lastContact: new Date().toISOString()
+                });
+                persistFirms('user');
+                openFirmPanel(state.currentFirm);
+            };
+            
+            window.onresize = () => {
+                if (state.viewMode === 'scatter') resizeCanvas();
+                if (state.viewMode === 'map' && state.mapProjection) {
+                    const container = $('map-container');
+                    const width = container.clientWidth;
+                    const height = container.clientHeight;
+                    state.mapProjection.scale((width/2/Math.PI)*0.8).translate([width/2, height/1.8]);
+                    updateMapBubbles();
+                }
+            };
+        }
+
+        // Initialize
+        function init() {
+            // Populate dropdowns
+            $('form-location').innerHTML = '<option value="">Select Location</option>' + 
+                Object.keys(CONFIG.CITY_COORDS).map(c => `<option value="${c}">${c}</option>`).join('');
+            
+            $('form-stage').innerHTML = CONFIG.STAGE_NAMES.map((n,i) => 
+                `<option value="${i+1}">${i+1} - ${n}</option>`).join('');
+            
+            $('progress-stages').innerHTML = CONFIG.STAGE_NAMES.map(n => 
+                `<span>${n}</span>`).join('');
+            
+            loadData();
+            setupCanvas();
+            initMap();
+            setupEventListeners();
+            setView('map');
+        }
+
         init();
     </script>
 </body>
